@@ -1,0 +1,209 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && data.ownerId == request.auth.uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Entity Validations ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'createdAt']) &&
+             data.keys().size() == 5 &&
+             data.id == request.auth.uid &&
+             data.email == request.auth.token.email &&
+             data.role in ['admin', 'user'] &&
+             data.createdAt == request.time;
+    }
+
+    function isValidLead(data) {
+      return data.keys().hasAll(['firstName', 'lastName', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
+             data.firstName is string && data.firstName.size() <= 100 &&
+             data.lastName is string && data.lastName.size() <= 100 &&
+             data.status in ['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost'] &&
+             data.ownerId == request.auth.uid &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time &&
+             (!('source' in data) || (data.source is string && data.source.size() <= 100)) &&
+             (!('tag' in data) || data.tag in ['NBD', 'CRR-NBD']);
+    }
+
+    function isValidAccount(data) {
+      return data.keys().hasAll(['name', 'ownerId', 'createdAt', 'updatedAt']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.ownerId == request.auth.uid &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time;
+    }
+
+    function isValidOpportunity(data) {
+      return data.keys().hasAll(['name', 'accountId', 'value', 'stage', 'ownerId', 'createdAt', 'updatedAt']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.accountId is string &&
+             data.value is number &&
+             data.stage in ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'] &&
+             data.ownerId == request.auth.uid &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time &&
+             (!('tag' in data) || data.tag in ['NBD', 'CRR-NBD']);
+    }
+
+    function isValidKPI(data) {
+      return data.keys().hasAll([
+        'weekEnding', 'newBOQAddedCr', 'crrNbdBOQ', 'nbdBOQ', 'noOfBOQReceived', 
+        'orderBookingCr', 'noOfOrderBooking', 'newGPCr', 'newGPPercent', 
+        'averageRsSale', 'averageGP', 'averageBOQReceived', 'ownerId', 'createdAt', 'updatedAt'
+      ]) &&
+      data.weekEnding is string &&
+      data.ownerId == request.auth.uid &&
+      data.createdAt == request.time &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidInteraction(data) {
+      return data.keys().hasAll(['type', 'content', 'relatedToId', 'relatedToType', 'ownerId', 'createdAt']) &&
+             data.type in ['Email', 'Call', 'Meeting', 'Note'] &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.relatedToId is string &&
+             data.relatedToType in ['Lead', 'Account', 'Opportunity'] &&
+             data.ownerId == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    function isValidContact(data) {
+      return data.keys().hasAll(['firstName', 'lastName', 'accountId', 'ownerId', 'createdAt', 'updatedAt']) &&
+             data.firstName is string && data.firstName.size() <= 100 &&
+             data.lastName is string && data.lastName.size() <= 100 &&
+             data.accountId is string &&
+             data.ownerId == request.auth.uid &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['subject', 'status', 'priority', 'ownerId', 'createdAt', 'updatedAt']) &&
+             data.subject is string && data.subject.size() <= 200 &&
+             data.status in ['Not Started', 'In Progress', 'Completed', 'Deferred'] &&
+             data.priority in ['Low', 'Normal', 'High'] &&
+             data.ownerId == request.auth.uid &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time &&
+             (!('reminderAt' in data) || data.reminderAt is string) &&
+             (!('reminderSent' in data) || data.reminderSent is bool);
+    }
+
+    function isValidUserPreference(data) {
+      return data.keys().hasAll(['userId', 'dashboardWidgets']) &&
+             data.userId == request.auth.uid &&
+             data.dashboardWidgets is list;
+    }
+
+    // --- Collection Matches ---
+
+    match /userPreferences/{userId} {
+      allow get: if isVerified() && userId == request.auth.uid;
+      allow create, update: if isVerified() && userId == request.auth.uid && isValidUserPreference(request.resource.data);
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isVerified() && isValidUser(request.resource.data);
+      // No updates to user profile for now, or limited fields
+    }
+
+    match /leads/{leadId} {
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow get: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidLead(request.resource.data);
+      allow update: if isVerified() && 
+                    isOwner(resource.data) && 
+                    isValidLead(request.resource.data) &&
+                    request.resource.data.ownerId == resource.data.ownerId &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isVerified() && isOwner(resource.data);
+    }
+
+    match /accounts/{accountId} {
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow get: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidAccount(request.resource.data);
+      allow update: if isVerified() && 
+                    isOwner(resource.data) && 
+                    isValidAccount(request.resource.data) &&
+                    request.resource.data.ownerId == resource.data.ownerId &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isVerified() && isOwner(resource.data);
+    }
+
+    match /contacts/{contactId} {
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow get: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidContact(request.resource.data);
+      allow update: if isVerified() && 
+                    isOwner(resource.data) && 
+                    isValidContact(request.resource.data) &&
+                    request.resource.data.ownerId == resource.data.ownerId &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isVerified() && isOwner(resource.data);
+    }
+
+    match /tasks/{taskId} {
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow get: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidTask(request.resource.data);
+      allow update: if isVerified() && 
+                    isOwner(resource.data) && 
+                    isValidTask(request.resource.data) &&
+                    request.resource.data.ownerId == resource.data.ownerId &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isVerified() && isOwner(resource.data);
+    }
+
+    match /opportunities/{opportunityId} {
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow get: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidOpportunity(request.resource.data);
+      allow update: if isVerified() && 
+                    isOwner(resource.data) && 
+                    isValidOpportunity(request.resource.data) &&
+                    request.resource.data.ownerId == resource.data.ownerId &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isVerified() && isOwner(resource.data);
+    }
+
+    match /kpis/{kpiId} {
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow get: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidKPI(request.resource.data);
+      allow delete: if isVerified() && isOwner(resource.data);
+    }
+
+    match /interactions/{interactionId} {
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow get: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidInteraction(request.resource.data);
+      allow delete: if isVerified() && isOwner(resource.data);
+    }
+  }
+}

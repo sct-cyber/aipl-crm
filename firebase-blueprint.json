@@ -1,0 +1,177 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "CRM user profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "avatar": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Potential customer or sales contact",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "company": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["New", "Contacted", "Qualified", "Unqualified", "Lost"] },
+        "source": { "type": "string" },
+        "tag": { "type": "string", "enum": ["NBD", "CRR-NBD"] },
+        "ownerId": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["firstName", "lastName", "status", "ownerId"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "A company or organization as a customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "industry": { "type": "string" },
+        "website": { "type": "string" },
+        "phone": { "type": "string" },
+        "billingAddress": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "ownerId"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "A sales deal in the pipeline",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "accountId": { "type": "string" },
+        "value": { "type": "number" },
+        "stage": { "type": "string", "enum": ["Prospecting", "Qualification", "Proposal", "Negotiation", "Closed Won", "Closed Lost"] },
+        "tag": { "type": "string", "enum": ["NBD", "CRR-NBD"] },
+        "probability": { "type": "number" },
+        "expectedCloseDate": { "type": "string", "format": "date" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "accountId", "value", "stage", "ownerId"]
+    },
+    "Interaction": {
+      "title": "Interaction",
+      "description": "Log of communication with a lead or account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["Email", "Call", "Meeting", "Note"] },
+        "subject": { "type": "string" },
+        "content": { "type": "string" },
+        "relatedToId": { "type": "string" },
+        "relatedToType": { "type": "string", "enum": ["Lead", "Account", "Opportunity"] },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "content", "relatedToId", "relatedToType", "ownerId"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "An individual associated with an account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "accountId": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "jobTitle": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["firstName", "lastName", "accountId", "ownerId"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A to-do item or follow-up action",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subject": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Not Started", "In Progress", "Completed", "Deferred"] },
+        "priority": { "type": "string", "enum": ["Low", "Normal", "High"] },
+        "relatedToId": { "type": "string" },
+        "relatedToType": { "type": "string", "enum": ["Lead", "Account", "Opportunity", "Contact"] },
+        "reminderAt": { "type": "string", "format": "date-time" },
+        "reminderSent": { "type": "boolean" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subject", "status", "priority", "ownerId"]
+    },
+    "UserPreferences": {
+      "title": "UserPreferences",
+      "description": "User specific application settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dashboardWidgets": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "required": ["userId", "dashboardWidgets"]
+    },
+    "KPIMetrics": {
+      "title": "KPIMetrics",
+      "description": "Weekly KPI performance indicators",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "weekEnding": { "type": "string" },
+        "newBOQAddedCr": { "type": "number" },
+        "crrNbdBOQ": { "type": "number" },
+        "nbdBOQ": { "type": "number" },
+        "noOfBOQReceived": { "type": "number" },
+        "orderBookingCr": { "type": "number" },
+        "noOfOrderBooking": { "type": "number" },
+        "newGPCr": { "type": "number" },
+        "newGPPercent": { "type": "number" },
+        "averageRsSale": { "type": "number" },
+        "averageGP": { "type": "number" },
+        "averageBOQReceived": { "type": "number" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["weekEnding", "ownerId"]
+    }
+  },
+  "firestore": {
+    "/userPreferences/{userId}": { "schema": "UserPreferences", "description": "User dashboard settings" },
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/leads/{leadId}": { "schema": "Lead", "description": "Sales leads" },
+    "/accounts/{accountId}": { "schema": "Account", "description": "Customer accounts" },
+    "/contacts/{contactId}": { "schema": "Contact", "description": "Business contacts" },
+    "/tasks/{taskId}": { "schema": "Task", "description": "CRM tasks" },
+    "/opportunities/{opportunityId}": { "schema": "Opportunity", "description": "Sales pipeline deals" },
+    "/interactions/{interactionId}": { "schema": "Interaction", "description": "Communication logs" },
+    "/kpis/{kpiId}": { "schema": "KPIMetrics", "description": "Weekly KPI entries" }
+  }
+}
