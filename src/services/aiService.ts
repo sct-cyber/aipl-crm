@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Lead } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: AIzaSyAtxkhwbWGnfGtAyl1y9lZlwu571n_N4sA.GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: "AIzaSyAtxkhwbWGnfGtAyl1y9lZlwu571n_N4sA" });
 
 export async function analyzeLead(lead: Lead) {
   try {
