@@ -1,17 +1,26 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --color-brand-primary: #6b705c;
-  --color-brand-secondary: #2d2d2a;
-  --color-brand-light: #f7f7f2;
-  --color-brand-accent: #e9e9e0;
-  --color-brand-muted: #a5a58d;
-  
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+:root {
+  --primary: #CC0000; /* AIPL Red */
+  --primary-foreground: #ffffff;
+  --background: #000000; /* Solid Black */
+  --foreground: #ffffff;
 }
 
-@layer base {
-  body {
-    @apply bg-brand-light text-gray-900 antialiased;
-  }
+body {
+  @apply bg-slate-50 text-slate-900 antialiased overflow-x-hidden;
+  width: 100vw;
 }
+
+/* Fix for "Page not fitting screen" */
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Making buttons and highlights Red */
+.bg-primary { background-color: #CC0000 !important; }
+.text-primary { color: #CC0000 !important; }
+.border-primary { border-color: #CC0000 !important; }
