@@ -1,17 +1,19 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
-{
-  "projectId": "gen-lang-client-0815291403",
-  "appId": "1:259192772382:web:e8a2fdff15f4ceac439b0f",
-  "apiKey": "AIzaSyBO9K33tnpwvIugANqm2VAVUmqPTWiNA6U",
-  "authDomain": "gen-lang-client-0815291403.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-6e2802ca-edf5-435b-96a6-512b03ff1a9a",
-  "storageBucket": "gen-lang-client-0815291403.firebasestorage.app",
-  "messagingSenderId": "259192772382",
-  "measurementId": ""
-};
-const app = initializeApp(firebaseConfig);
+import { initializeApp } from 'firebase/app'; 
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'; 
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore'; 
+
+const firebaseConfig = { 
+  "projectId": "gen-lang-client-0815291403", 
+  "appId": "1:259192772382:web:e8a2fdff15f4ceac439b0f", 
+  "apiKey": "AIzaSyBO9K33tnpwvIugANqm2VAVUmqPTWiNA6U", 
+  "authDomain": "gen-lang-client-0815291403.firebaseapp.com", 
+  "firestoreDatabaseId": "ai-studio-6e2802ca-edf5-435b-96a6-512b03ff1a9a", 
+  "storageBucket": "gen-lang-client-0815291403.firebasestorage.app", 
+  "messagingSenderId": "259192772382", 
+  "measurementId": "" 
+}; 
+
+const app = initializeApp(firebaseConfig); 
 export const auth = getAuth(app);
 // This tells the app to use your specific AI Studio database
 export const db = getFirestore(app, "ai-studio-6e2802ca-edf5-435b-96a6-512b03ff1a9a");
