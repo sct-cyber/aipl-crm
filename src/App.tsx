@@ -1,12 +1,10 @@
-// Replace everything in App.tsx with this to fix imports and logo
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { auth, db } from './lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth } from './lib/firebase';
 import { 
-  Users, Briefcase, BarChart3, MessageSquare, LayoutDashboard, 
-  LogOut, Menu, Plus, Search, Settings, TrendingUp, Contact as ContactIcon, CheckSquare 
+  Users, Briefcase, BarChart3, LayoutDashboard, 
+  LogOut, Menu, Plus, TrendingUp, Contact as ContactIcon, CheckSquare 
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from './lib/utils';
@@ -16,10 +14,7 @@ import Accounts from './views/AccountsView';
 import Contacts from './views/ContactsView';
 import Tasks from './views/TasksView';
 import Opportunities from './views/OpportunitiesView';
-import Timeline from './views/TimelineView';
-import Integrations from './views/IntegrationsView';
 import KPIs from './views/KPIsView';
-import { TaskNotificationProvider } from './components/TaskNotificationProvider';
 
 const NavItem = ({ to, icon: Icon, label, active }: { to: string, icon: any, label: string, active: boolean }) => (
   <Link to={to} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group", active ? "bg-[#CC0000] text-white shadow-lg" : "text-slate-500 hover:bg-slate-50 hover:text-[#CC0000]")}>
@@ -36,9 +31,6 @@ const AppLayout = ({ children, user }: { children: React.ReactNode, user: Fireba
       <aside className={cn("fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 transition-transform duration-300 transform lg:translate-x-0", !isSidebarOpen && "-translate-x-full")}>
         <div className="flex flex-col h-full p-6">
           <div className="flex items-center gap-3 mb-10 px-2">
-            <div className="w-12 h-12 flex items-center justify-center bg-slate-50 rounded-xl overflow-hidden border border-slate-100">
-              <img src="/AI Logo_13Feb23.jpg" alt="AIPL" className="w-full h-full object-contain mix-blend-multiply" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=AIPL&background=CC0000&color=fff'; }} />
-            </div>
             <span className="text-xl font-black tracking-tighter text-slate-900">AIPL <span className="text-[#CC0000]">CRM</span></span>
           </div>
           <nav className="flex-1 space-y-1">
@@ -58,7 +50,7 @@ const AppLayout = ({ children, user }: { children: React.ReactNode, user: Fireba
       <main className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", isSidebarOpen ? "lg:ml-72" : "ml-0")}>
         <header className="h-20 border-b border-slate-100 bg-white sticky top-0 z-30 px-6 flex items-center justify-between">
           <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-50 rounded-lg"><Menu size={20} /></button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#CC0000] text-white rounded-lg text-sm font-bold"><Plus size={18} /><span>Quick Add</span></button>
+          <div className="text-sm font-bold text-slate-400">AIPL Internal Intelligence</div>
         </header>
         <div className="flex-1 w-full">{children}</div>
       </main>
@@ -66,5 +58,56 @@ const AppLayout = ({ children, user }: { children: React.ReactNode, user: Fireba
   );
 };
 
-// ... Rest of the file (Login component and App export) stays the same
-export default function App() { /* Copy paste your existing App function here */ }
+const Login = () => {
+  const [loading, setLoading] = useState(false);
+  const handleLogin = async () => {
+    setLoading(true);
+    try {
+      const { signInWithPopup } = await import('firebase/auth');
+      const { googleProvider } = await import('./lib/firebase');
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) { console.error(error); } finally { setLoading(false); }
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-sm w-full bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100">
+        <h1 className="text-3xl font-black tracking-tight mb-2 text-slate-900">AIPL <span className="text-[#CC0000]">CRM</span></h1>
+        <button onClick={handleLogin} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white py-4 px-6 rounded-2xl font-bold hover:bg-[#CC0000] transition-all disabled:opacity-50">
+          {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <span>Continue with Google</span>}
+        </button>
+      </motion.div>
+    </div>
+  );
+};
+
+export default function App() {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    return onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
+  }, []);
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-white">Loading...</div>;
+  return (
+    <BrowserRouter>
+      {!user ? (
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      ) : (
+        <AppLayout user={user}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/leads" element={<Leads />} />
+            <Route path="/contacts" element={<Contacts />} />
+            <Route path="/accounts" element={<Accounts />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/opportunities" element={<Opportunities />} />
+            <Route path="/kpis" element={<KPIs />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AppLayout>
+      )}
+    </BrowserRouter>
+  );
+}
