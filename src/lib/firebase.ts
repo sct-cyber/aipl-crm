@@ -2,7 +2,6 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// 1. The Setup
 const firebaseConfig = {
   apiKey: "AIzaSyBO9K33tnpwvIugANqm2VAVUmqPTWiNA6U",
   authDomain: "gen-lang-client-0815291403.firebaseapp.com",
@@ -14,12 +13,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// 2. The Exports (Only one of each!)
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app, "ai-studio-6e2802ca-edf5-435b-96a6-512b03ff1a9a");
 
-// 3. Helper Types for the CRM
+// Essential exports for the CRM Service
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
