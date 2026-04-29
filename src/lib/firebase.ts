@@ -1,23 +1,28 @@
-import { initializeApp } from 'firebase/app'; 
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'; 
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore'; 
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
-const firebaseConfig = { 
-  "projectId": "gen-lang-client-0815291403", 
-  "appId": "1:259192772382:web:e8a2fdff15f4ceac439b0f", 
-  "apiKey": "AIzaSyBO9K33tnpwvIugANqm2VAVUmqPTWiNA6U", 
-  "authDomain": "gen-lang-client-0815291403.firebaseapp.com", 
-  "firestoreDatabaseId": "ai-studio-6e2802ca-edf5-435b-96a6-512b03ff1a9a", 
-  "storageBucket": "gen-lang-client-0815291403.firebasestorage.app", 
-  "messagingSenderId": "259192772382", 
-  "measurementId": "" 
-}; 
+// Hardcoded config to ensure Vercel always has the correct keys
+const firebaseConfig = {
+  apiKey: "AIzaSyBO9K33tnpwvIugANqm2VAVUmqPTWiNA6U",
+  authDomain: "gen-lang-client-0815291403.firebaseapp.com",
+  projectId: "gen-lang-client-0815291403",
+  storageBucket: "gen-lang-client-0815291403.firebasestorage.app",
+  messagingSenderId: "259192772382",
+  appId: "1:259192772382:web:e8a2fdff15f4ceac439b0f"
+};
 
-const app = initializeApp(firebaseConfig); 
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// Export Auth and Provider
 export const auth = getAuth(app);
-// This tells the app to use your specific AI Studio database
-export const db = getFirestore(app, "ai-studio-6e2802ca-edf5-435b-96a6-512b03ff1a9a");
 export const googleProvider = new GoogleAuthProvider();
+
+// Export Firestore with your specific AI Studio database ID
+export const db = getFirestore(app, "ai-studio-6e2802ca-edf5-435b-96a6-512b03ff1a9a");
+
+// --- Helper Types and Functions for CRM Services ---
 
 export enum OperationType {
   CREATE = 'create',
@@ -25,55 +30,24 @@ export enum OperationType {
   DELETE = 'delete',
   LIST = 'list',
   GET = 'get',
-  WRITE = 'write',
+  WRITE = 'write'
 }
 
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
-}
-
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
+/**
+ * Global error handler for Firestore operations used by crmService.ts
+ */
+export function handleFirestoreError(error: any, operation: OperationType, path: string | null) {
+  const errorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
-
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+    operation,
+    path,
+    timestamp: new Date().toISOString(),
+    authContext: {
+      loggedIn: !!auth.currentUser,
+      userId: auth.currentUser?.uid
     }
-  }
+  };
+  
+  console.error("Firestore Operation Failed:", errorInfo);
+  throw error;
 }
-
-testConnection();
