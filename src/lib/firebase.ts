@@ -17,7 +17,7 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app, "ai-studio-6e2802ca-edf5-435b-96a6-512b03ff1a9a");
 
-// Essential exports for the CRM Service
+// Simplified exports to match crmService requirements
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -28,6 +28,6 @@ export enum OperationType {
 }
 
 export function handleFirestoreError(error: any, operation: OperationType, path: string | null) {
-  console.error(`Firestore Error [${operation}] at ${path}:`, error);
+  console.error(`Error during ${operation} at ${path}:`, error);
   throw error;
 }
