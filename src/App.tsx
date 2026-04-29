@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from './lib/utils';
+
+// View Imports
 import Dashboard from './views/DashboardView';
 import Leads from './views/LeadsView';
 import Accounts from './views/AccountsView';
@@ -35,7 +37,7 @@ const AppLayout = ({ children, user }: { children: React.ReactNode, user: Fireba
           </div>
           <nav className="flex-1 space-y-1">
             <NavItem to="/" icon={LayoutDashboard} label="Dashboard" active={location.pathname === '/'} />
-            <NavItem to="/leads" icon={Users} label="Leads" active={location.pathname.startsWith('/leads')} />
+            <NavItem to="/leads" icon={Users} label="Leads" active={location.pathname.startsWith('/leads') || location.pathname === '/'} />
             <NavItem to="/contacts" icon={ContactIcon} label="Contacts" active={location.pathname.startsWith('/contacts')} />
             <NavItem to="/accounts" icon={Briefcase} label="Accounts" active={location.pathname.startsWith('/accounts')} />
             <NavItem to="/tasks" icon={CheckSquare} label="Tasks" active={location.pathname.startsWith('/tasks')} />
@@ -50,7 +52,13 @@ const AppLayout = ({ children, user }: { children: React.ReactNode, user: Fireba
       <main className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", isSidebarOpen ? "lg:ml-72" : "ml-0")}>
         <header className="h-20 border-b border-slate-100 bg-white sticky top-0 z-30 px-6 flex items-center justify-between">
           <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-50 rounded-lg"><Menu size={20} /></button>
-          <div className="text-sm font-bold text-slate-400">AIPL Internal Intelligence</div>
+          <div className="flex items-center gap-3">
+             <div className="text-sm font-bold text-slate-400 mr-4 hidden sm:block">AIPL Internal Intelligence</div>
+             <button className="flex items-center gap-2 px-4 py-2 bg-[#CC0000] text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-all shadow-sm">
+              <Plus size={18} />
+              <span>Quick Add</span>
+            </button>
+          </div>
         </header>
         <div className="flex-1 w-full">{children}</div>
       </main>
@@ -72,6 +80,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-sm w-full bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100">
         <h1 className="text-3xl font-black tracking-tight mb-2 text-slate-900">AIPL <span className="text-[#CC0000]">CRM</span></h1>
+        <p className="text-slate-400 mb-8 text-sm font-medium">Business Intelligence Suite</p>
         <button onClick={handleLogin} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white py-4 px-6 rounded-2xl font-bold hover:bg-[#CC0000] transition-all disabled:opacity-50">
           {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <span>Continue with Google</span>}
         </button>
@@ -86,7 +95,7 @@ export default function App() {
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
   }, []);
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-white">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-white font-bold text-slate-400 animate-pulse">Initializing AIPL CRM...</div>;
   return (
     <BrowserRouter>
       {!user ? (
