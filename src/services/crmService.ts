@@ -35,6 +35,14 @@ export const crmService = {
     }
   },
 
+  deleteLead: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'leads', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `leads/${id}`);
+    }
+  },
+
   // --- Tasks ---
   subscribeToTasks: (callback: (tasks: Task[]) => void) => {
     if (!auth.currentUser) return () => {};
@@ -42,7 +50,7 @@ export const crmService = {
     return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task))), (error) => handleFirestoreError(error, OperationType.LIST, 'tasks'));
   },
 
-  // --- Accounts, Contacts, Opportunities ---
+  // --- Accounts, Contacts & Opportunities ---
   subscribeToAccounts: (callback: (accounts: Account[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(collection(db, 'accounts'), where('ownerId', '==', auth.currentUser.uid));
@@ -61,7 +69,7 @@ export const crmService = {
     return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Opportunity))), (error) => handleFirestoreError(error, OperationType.LIST, 'opportunities'));
   },
 
-  // --- KPIs & Interactions (Critical for Dashboard & KPI views) ---
+  // --- KPIs & Interactions (Essential for the Dashboard) ---
   subscribeToKPIs: (callback: (kpis: KPIMetrics[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(collection(db, 'kpis'), where('ownerId', '==', auth.currentUser.uid), orderBy('weekEnding', 'desc'));
