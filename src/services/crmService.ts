@@ -8,24 +8,20 @@ import {
   where, 
   onSnapshot,
   orderBy,
-  Timestamp,
-  serverTimestamp
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Lead, Account, Opportunity, Interaction, Contact, Task, UserPreferences, DashboardWidget, KPIMetrics } from '../types';
 
 export const crmService = {
-  // --- User Preferences ---
+
+  // ─── User Preferences ────────────────────────────────────────────────────────
+
   subscribeToUserPreferences: (callback: (prefs: UserPreferences | null) => void) => {
     if (!auth.currentUser) return () => {};
     const prefRef = doc(db, 'userPreferences', auth.currentUser.uid);
-    return onSnapshot(prefRef, 
+    return onSnapshot(prefRef,
       (snapshot) => {
-        if (snapshot.exists()) {
-          callback(snapshot.data() as UserPreferences);
-        } else {
-          callback(null);
-        }
+        callback(snapshot.exists() ? (snapshot.data() as UserPreferences) : null);
       },
       (error) => handleFirestoreError(error, OperationType.GET, 'userPreferences')
     );
@@ -35,29 +31,21 @@ export const crmService = {
     if (!auth.currentUser) throw new Error('Not authenticated');
     try {
       const prefRef = doc(db, 'userPreferences', auth.currentUser.uid);
-      const updateData: any = {
-        userId: auth.currentUser.uid,
-        dashboardWidgets: widgets
-      };
-      if (sheetsSync) {
-        updateData.sheetsSync = sheetsSync;
-      }
-      
+      const updateData: any = { userId: auth.currentUser.uid, dashboardWidgets: widgets };
+      if (sheetsSync) updateData.sheetsSync = sheetsSync;
       await updateDoc(prefRef, updateData).catch(async (err) => {
-        // If doc doesn't exist, set it
         if (err.code === 'not-found') {
           const { setDoc } = await import('firebase/firestore');
           await setDoc(prefRef, updateData);
-        } else {
-          throw err;
-        }
+        } else throw err;
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, 'userPreferences');
     }
   },
 
-  // --- KPI Metrics ---
+  // ─── KPI Metrics ─────────────────────────────────────────────────────────────
+
   subscribeToKPIs: (callback: (kpis: KPIMetrics[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(
@@ -65,11 +53,8 @@ export const crmService = {
       where('ownerId', '==', auth.currentUser.uid),
       orderBy('weekEnding', 'desc')
     );
-    return onSnapshot(q, 
-      (snapshot) => {
-        const kpis = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KPIMetrics));
-        callback(kpis);
-      },
+    return onSnapshot(q,
+      (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as KPIMetrics))),
       (error) => handleFirestoreError(error, OperationType.LIST, 'kpis')
     );
   },
@@ -82,14 +67,31 @@ export const crmService = {
         ...kpiData,
         ownerId: auth.currentUser.uid,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'kpis');
     }
   },
 
-  // --- Leads ---
+  updateKPI: async (id: string, updates: Partial<KPIMetrics>) => {
+    try {
+      await updateDoc(doc(db, 'kpis', id), { ...updates, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `kpis/${id}`);
+    }
+  },
+
+  deleteKPI: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'kpis', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `kpis/${id}`);
+    }
+  },
+
+  // ─── Leads ───────────────────────────────────────────────────────────────────
+
   subscribeToLeads: (callback: (leads: Lead[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(
@@ -97,11 +99,8 @@ export const crmService = {
       where('ownerId', '==', auth.currentUser.uid),
       orderBy('updatedAt', 'desc')
     );
-    return onSnapshot(q, 
-      (snapshot) => {
-        const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
-        callback(leads);
-      },
+    return onSnapshot(q,
+      (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Lead))),
       (error) => handleFirestoreError(error, OperationType.LIST, 'leads')
     );
   },
@@ -114,7 +113,7 @@ export const crmService = {
         ...leadData,
         ownerId: auth.currentUser.uid,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'leads');
@@ -123,17 +122,22 @@ export const crmService = {
 
   updateLead: async (id: string, updates: Partial<Lead>) => {
     try {
-      const leadRef = doc(db, 'leads', id);
-      await updateDoc(leadRef, {
-        ...updates,
-        updatedAt: new Date().toISOString()
-      });
+      await updateDoc(doc(db, 'leads', id), { ...updates, updatedAt: new Date().toISOString() });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `leads/${id}`);
     }
   },
 
-  // --- Accounts ---
+  deleteLead: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'leads', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `leads/${id}`);
+    }
+  },
+
+  // ─── Accounts ────────────────────────────────────────────────────────────────
+
   subscribeToAccounts: (callback: (accounts: Account[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(
@@ -141,11 +145,8 @@ export const crmService = {
       where('ownerId', '==', auth.currentUser.uid),
       orderBy('updatedAt', 'desc')
     );
-    return onSnapshot(q, 
-      (snapshot) => {
-        const accounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
-        callback(accounts);
-      },
+    return onSnapshot(q,
+      (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Account))),
       (error) => handleFirestoreError(error, OperationType.LIST, 'accounts')
     );
   },
@@ -158,14 +159,31 @@ export const crmService = {
         ...accountData,
         ownerId: auth.currentUser.uid,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'accounts');
     }
   },
 
-  // --- Contacts ---
+  updateAccount: async (id: string, updates: Partial<Account>) => {
+    try {
+      await updateDoc(doc(db, 'accounts', id), { ...updates, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `accounts/${id}`);
+    }
+  },
+
+  deleteAccount: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'accounts', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `accounts/${id}`);
+    }
+  },
+
+  // ─── Contacts ────────────────────────────────────────────────────────────────
+
   subscribeToContacts: (callback: (contacts: Contact[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(
@@ -173,11 +191,8 @@ export const crmService = {
       where('ownerId', '==', auth.currentUser.uid),
       orderBy('updatedAt', 'desc')
     );
-    return onSnapshot(q, 
-      (snapshot) => {
-        const contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
-        callback(contacts);
-      },
+    return onSnapshot(q,
+      (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Contact))),
       (error) => handleFirestoreError(error, OperationType.LIST, 'contacts')
     );
   },
@@ -190,14 +205,31 @@ export const crmService = {
         ...contactData,
         ownerId: auth.currentUser.uid,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'contacts');
     }
   },
 
-  // --- Tasks ---
+  updateContact: async (id: string, updates: Partial<Contact>) => {
+    try {
+      await updateDoc(doc(db, 'contacts', id), { ...updates, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `contacts/${id}`);
+    }
+  },
+
+  deleteContact: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'contacts', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `contacts/${id}`);
+    }
+  },
+
+  // ─── Tasks ───────────────────────────────────────────────────────────────────
+
   subscribeToTasks: (callback: (tasks: Task[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(
@@ -205,11 +237,8 @@ export const crmService = {
       where('ownerId', '==', auth.currentUser.uid),
       orderBy('dueDate', 'asc')
     );
-    return onSnapshot(q, 
-      (snapshot) => {
-        const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
-        callback(tasks);
-      },
+    return onSnapshot(q,
+      (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task))),
       (error) => handleFirestoreError(error, OperationType.LIST, 'tasks')
     );
   },
@@ -222,7 +251,7 @@ export const crmService = {
         ...taskData,
         ownerId: auth.currentUser.uid,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'tasks');
@@ -231,17 +260,22 @@ export const crmService = {
 
   updateTask: async (id: string, updates: Partial<Task>) => {
     try {
-      const taskRef = doc(db, 'tasks', id);
-      await updateDoc(taskRef, {
-        ...updates,
-        updatedAt: new Date().toISOString()
-      });
+      await updateDoc(doc(db, 'tasks', id), { ...updates, updatedAt: new Date().toISOString() });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
     }
   },
 
-  // --- Opportunities ---
+  deleteTask: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'tasks', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `tasks/${id}`);
+    }
+  },
+
+  // ─── Opportunities ───────────────────────────────────────────────────────────
+
   subscribeToOpportunities: (callback: (opps: Opportunity[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(
@@ -249,11 +283,8 @@ export const crmService = {
       where('ownerId', '==', auth.currentUser.uid),
       orderBy('updatedAt', 'desc')
     );
-    return onSnapshot(q, 
-      (snapshot) => {
-        const opps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
-        callback(opps);
-      },
+    return onSnapshot(q,
+      (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Opportunity))),
       (error) => handleFirestoreError(error, OperationType.LIST, 'opportunities')
     );
   },
@@ -266,14 +297,31 @@ export const crmService = {
         ...oppData,
         ownerId: auth.currentUser.uid,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'opportunities');
     }
   },
 
-  // --- Interactions ---
+  updateOpportunity: async (id: string, updates: Partial<Opportunity>) => {
+    try {
+      await updateDoc(doc(db, 'opportunities', id), { ...updates, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `opportunities/${id}`);
+    }
+  },
+
+  deleteOpportunity: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'opportunities', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `opportunities/${id}`);
+    }
+  },
+
+  // ─── Interactions ────────────────────────────────────────────────────────────
+
   subscribeToInteractions: (relatedToId: string, callback: (interactions: Interaction[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(
@@ -282,11 +330,22 @@ export const crmService = {
       where('relatedToId', '==', relatedToId),
       orderBy('createdAt', 'desc')
     );
-    return onSnapshot(q, 
-      (snapshot) => {
-        const interactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Interaction));
-        callback(interactions);
-      },
+    return onSnapshot(q,
+      (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Interaction))),
+      (error) => handleFirestoreError(error, OperationType.LIST, 'interactions')
+    );
+  },
+
+  // Subscribe to ALL interactions (for the Timeline view)
+  subscribeToAllInteractions: (callback: (interactions: Interaction[]) => void) => {
+    if (!auth.currentUser) return () => {};
+    const q = query(
+      collection(db, 'interactions'),
+      where('ownerId', '==', auth.currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
+    return onSnapshot(q,
+      (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Interaction))),
       (error) => handleFirestoreError(error, OperationType.LIST, 'interactions')
     );
   },
@@ -297,10 +356,18 @@ export const crmService = {
       await addDoc(collection(db, 'interactions'), {
         ...interactionData,
         ownerId: auth.currentUser.uid,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'interactions');
     }
-  }
+  },
+
+  deleteInteraction: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'interactions', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `interactions/${id}`);
+    }
+  },
 };
