@@ -18,12 +18,11 @@ import {
   Contact, 
   Task, 
   UserPreferences, 
-  DashboardWidget, 
-  KPIMetrics 
+  DashboardWidget 
 } from '../types';
 
 export const crmService = {
-  // ─── User Preferences ────────────────────────────────────────────────────────
+  // --- User Preferences ---
   subscribeToUserPreferences: (callback: (prefs: UserPreferences | null) => void) => {
     if (!auth.currentUser) return () => {};
     const prefRef = doc(db, 'userPreferences', auth.currentUser.uid);
@@ -32,24 +31,7 @@ export const crmService = {
     }, (error) => handleFirestoreError(error, OperationType.GET, 'userPreferences'));
   },
 
-  updateUserPreferences: async (widgets: DashboardWidget[], sheetsSync?: UserPreferences['sheetsSync']) => {
-    if (!auth.currentUser) throw new Error('Not authenticated');
-    try {
-      const prefRef = doc(db, 'userPreferences', auth.currentUser.uid);
-      const updateData: any = { userId: auth.currentUser.uid, dashboardWidgets: widgets };
-      if (sheetsSync) updateData.sheetsSync = sheetsSync;
-      await updateDoc(prefRef, updateData).catch(async (err) => {
-        if (err.code === 'not-found') {
-          const { setDoc } = await import('firebase/firestore');
-          await setDoc(prefRef, updateData);
-        } else throw err;
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, 'userPreferences');
-    }
-  },
-
-  // ─── Leads ───────────────────────────────────────────────────────────────────
+  // --- Leads ---
   subscribeToLeads: (callback: (leads: Lead[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(collection(db, 'leads'), where('ownerId', '==', auth.currentUser.uid), orderBy('updatedAt', 'desc'));
@@ -58,8 +40,8 @@ export const crmService = {
 
   addLead: async (leadData: Omit<Lead, 'id' | 'ownerId' | 'createdAt' | 'updatedAt'>) => {
     if (!auth.currentUser) throw new Error('Not authenticated');
+    const now = new Date().toISOString();
     try {
-      const now = new Date().toISOString();
       await addDoc(collection(db, 'leads'), { ...leadData, ownerId: auth.currentUser.uid, createdAt: now, updatedAt: now });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'leads');
@@ -72,5 +54,25 @@ export const crmService = {
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `leads/${id}`);
     }
+  },
+
+  // --- Tasks ---
+  subscribeToTasks: (callback: (tasks: Task[]) => void) => {
+    if (!auth.currentUser) return () => {};
+    const q = query(collection(db, 'tasks'), where('ownerId', '==', auth.currentUser.uid), orderBy('dueDate', 'asc'));
+    return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task))), (error) => handleFirestoreError(error, OperationType.LIST, 'tasks'));
+  },
+
+  // --- Accounts & Opportunities (Added back for stability) ---
+  subscribeToAccounts: (callback: (accounts: Account[]) => void) => {
+    if (!auth.currentUser) return () => {};
+    const q = query(collection(db, 'accounts'), where('ownerId', '==', auth.currentUser.uid));
+    return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Account))), (error) => handleFirestoreError(error, OperationType.LIST, 'accounts'));
+  },
+
+  subscribeToOpportunities: (callback: (opps: Opportunity[]) => void) => {
+    if (!auth.currentUser) return () => {};
+    const q = query(collection(db, 'opportunities'), where('ownerId', '==', auth.currentUser.uid));
+    return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Opportunity))), (error) => handleFirestoreError(error, OperationType.LIST, 'opportunities'));
   }
 };
