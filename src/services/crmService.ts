@@ -14,7 +14,6 @@ import {
   Lead, 
   Account, 
   Opportunity, 
-  Interaction, 
   Contact, 
   Task, 
   UserPreferences, 
@@ -63,16 +62,24 @@ export const crmService = {
     return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task))), (error) => handleFirestoreError(error, OperationType.LIST, 'tasks'));
   },
 
-  // --- Accounts & Opportunities (Added back for stability) ---
+  // --- Accounts ---
   subscribeToAccounts: (callback: (accounts: Account[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(collection(db, 'accounts'), where('ownerId', '==', auth.currentUser.uid));
     return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Account))), (error) => handleFirestoreError(error, OperationType.LIST, 'accounts'));
   },
 
+  // --- Opportunities ---
   subscribeToOpportunities: (callback: (opps: Opportunity[]) => void) => {
     if (!auth.currentUser) return () => {};
     const q = query(collection(db, 'opportunities'), where('ownerId', '==', auth.currentUser.uid));
     return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Opportunity))), (error) => handleFirestoreError(error, OperationType.LIST, 'opportunities'));
+  },
+
+  // --- Contacts ---
+  subscribeToContacts: (callback: (contacts: Contact[]) => void) => {
+    if (!auth.currentUser) return () => {};
+    const q = query(collection(db, 'contacts'), where('ownerId', '==', auth.currentUser.uid));
+    return onSnapshot(q, (snapshot) => callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Contact))), (error) => handleFirestoreError(error, OperationType.LIST, 'contacts'));
   }
 };
